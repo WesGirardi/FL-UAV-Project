@@ -17,20 +17,82 @@ Developed as a portfolio project to demonstrate applied skills in flight dynamic
 
 ## Phase 1 — Equations of Motion & Hover Test
 
-### What's modeled
-A full 6-DOF rigid-body quadrotor using Newton-Euler equations of motion:
+### State Vector
 
-- **Translational dynamics** — world-frame accelerations driven by total rotor thrust, projected through a ZYX Euler rotation matrix
-- **Rotational dynamics** — body-frame angular accelerations via Euler's equations, driven by differential rotor torques
-- **Euler angle kinematics** — body angular rates mapped to Euler angle rates
+The quadrotor is modeled as a 6-DOF rigid body with 12 states:
 
-**State vector (12 states):**
+$$\mathbf{x} = [x,\ y,\ z,\ \dot{x},\ \dot{y},\ \dot{z},\ \phi,\ \theta,\ \psi,\ p,\ q,\ r]^T$$
+
+where $(x, y, z)$ is world-frame position, $(\dot{x}, \dot{y}, \dot{z})$ is world-frame velocity, $(\phi, \theta, \psi)$ are roll/pitch/yaw Euler angles, and $(p, q, r)$ are body-frame angular rates.
+
+---
+
+### Rotor Forces & Moments
+
+Each rotor produces thrust proportional to the square of its speed. The four rotor inputs map to a total thrust and three moments:
+
+$$F_T = k(\omega_1^2 + \omega_2^2 + \omega_3^2 + \omega_4^2)$$
+
+$$L = kd(-\omega_2^2 + \omega_4^2) \quad \text{(roll moment)}$$
+
+$$M = kd(-\omega_1^2 + \omega_3^2) \quad \text{(pitch moment)}$$
+
+$$N = b(-\omega_1^2 + \omega_2^2 - \omega_3^2 + \omega_4^2) \quad \text{(yaw moment)}$$
+
+where $k$ is the thrust coefficient, $b$ is the drag coefficient, and $d$ is the arm length.
+
+**Rotor layout (top view):**
 ```
-[x, y, z, xdot, ydot, zdot, phi, theta, psi, p, q, r]
- |position |  |velocity  |  |euler angles|  |body rates|
+    1 (CW)
+4 (CCW)  2 (CCW)
+    3 (CW)
 ```
 
-**Control inputs:** 4 rotor speeds [ω₁, ω₂, ω₃, ω₄] in rad/s
+---
+
+### Translational Dynamics
+
+World-frame accelerations are computed by projecting the body-frame thrust through a ZYX Euler rotation matrix:
+
+$$m\ddot{x} = (\cos\phi\sin\theta\cos\psi + \sin\phi\sin\psi)\ F_T$$
+
+$$m\ddot{y} = (\cos\phi\sin\theta\sin\psi - \sin\phi\cos\psi)\ F_T$$
+
+$$m\ddot{z} = -mg + (\cos\phi\cos\theta)\ F_T$$
+
+---
+
+### Rotational Dynamics
+
+Body-frame angular accelerations follow Euler's equations:
+
+$$\dot{p} = \frac{(I_{yy} - I_{zz})qr + L}{I_{xx}}$$
+
+$$\dot{q} = \frac{(I_{zz} - I_{xx})pr + M}{I_{yy}}$$
+
+$$\dot{r} = \frac{(I_{xx} - I_{yy})pq + N}{I_{zz}}$$
+
+---
+
+### Euler Angle Kinematics
+
+Body angular rates are mapped to Euler angle rates:
+
+$$\dot{\phi} = p + (q\sin\phi + r\cos\phi)\tan\theta$$
+
+$$\dot{\theta} = q\cos\phi - r\sin\phi$$
+
+$$\dot{\psi} = \frac{q\sin\phi + r\cos\phi}{\cos\theta}$$
+
+---
+
+### Hover Condition
+
+At hover, total thrust equals weight with all rotors at equal speed:
+
+$$4k\omega_{hover}^2 = mg \implies \omega_{hover} = \sqrt{\frac{mg}{4k}}$$
+
+---
 
 ### Files
 ```
@@ -50,10 +112,10 @@ A full 6-DOF rigid-body quadrotor using Newton-Euler equations of motion:
 |-----------|-------|
 | Mass | 0.5 kg |
 | Arm length | 0.225 m |
-| Ixx / Iyy | 5×10⁻³ kg·m² |
-| Izz | 1×10⁻² kg·m² |
-| Thrust coeff (k) | 3×10⁻⁶ N/(rad/s)² |
-| Drag coeff (b) | 1×10⁻⁷ Nm/(rad/s)² |
+| $I_{xx}$ / $I_{yy}$ | $5 \times 10^{-3}$ kg·m² |
+| $I_{zz}$ | $1 \times 10^{-2}$ kg·m² |
+| Thrust coeff $k$ | $3 \times 10^{-6}$ N/(rad/s)² |
+| Drag coeff $b$ | $1 \times 10^{-7}$ Nm/(rad/s)² |
 
 ---
 
